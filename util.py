@@ -9,8 +9,6 @@ from nbtlib import schema
 START_ANGLE = 0
 ANGLES = {"w": 0, "e": 1, "d": 2, "s": 3, "a": 4, "q": 5}
 
-# /give @p hexcasting:focus{data:{list: [{pattern: {angles: [B; 5B, 5B, 5B, 5B, 5B], start_dir: 4b}}]}}
-
 FocusSchema = schema(
     "FocusSchema",
     {
@@ -34,6 +32,7 @@ FocusSchema = schema(
 )
 
 
+# TODO: Add optimising pass to remove consecutive mul-2 and div-2 ops.
 def number_to_pattern(num: float):
     """
     Converts number to a pattern. First converts the number to IEEE 754

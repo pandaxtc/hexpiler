@@ -37,7 +37,7 @@ from pygments.formatters import TerminalTrueColorFormatter
 from builtin_patterns import builtin_patterns
 from util import number_to_pattern, patterns_to_give_command
 
-GRAMMAR = open("hex.grammar").read()
+GRAMMAR = open("hexlisp.grammar").read()
 
 # Defined variables. Mutates over the course of an evaluation.
 symbols = ChainMap(builtin_patterns)
@@ -123,10 +123,11 @@ def eval_vector(node: ParseTree):
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="hexpiler", description="A Lisp-Like to Hex Casting transpiler. Heavy WIP."
+        prog="hexpiler",
+        description="A hexlisp transpiler for the Hex Casting mod. Heavy WIP.",
     )
-    parser.add_argument("file")
-    parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("file", help="Input file.")
+    parser.add_argument("-d", "--debug", action="store_true", help="Print debug info.")
     args = parser.parse_args()
 
     if args.debug:
