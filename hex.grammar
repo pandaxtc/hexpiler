@@ -1,0 +1,52 @@
+?start: expression*
+
+?expression: invocation
+           | list 
+           | vector
+           | literal 
+
+literal:  SIGNED_NUMBER
+        | SYMBOL
+        | NULL
+
+vector: "<" expression "," expression "," expression ">"
+
+list: "[" (expression ("," expression)*)? "]"
+
+invocation: "(" SYMBOL expression* ")"
+
+SYMBOL: (LETTER
+        |DIGIT
+        |"+"
+        |"-"
+        |"."
+        |"*"
+        |"/"
+        |"<"
+        |"="
+        |">"
+        |"!"
+        |"?"
+        |":"
+        |"$"
+        |"%"
+        |"_"
+        |"&"
+        |"~"
+        |"^")+
+
+NULL: "NULL"
+
+COMMENT: "#" /[^\n]*/ _NEWLINE
+
+_NEWLINE: "\n"
+
+%ignore COMMENT
+
+%import common.DIGIT
+%import common.ESCAPED_STRING
+%import common.LETTER
+%import common.SIGNED_NUMBER
+%import common.WS
+
+%ignore WS

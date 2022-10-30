@@ -1,0 +1,10 @@
+#(break_block
+#    (raycast
+#        (get_entity_pos self)
+#        (get_entity_look self)))
+
+(bonemeal
+    (+ (raycast 
+            (get_entity_pos self)
+            (get_entity_look self))
+        <0,1,0>))

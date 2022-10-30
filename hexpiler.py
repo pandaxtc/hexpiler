@@ -15,105 +15,63 @@ Check hex.grammar for grammar.
     (raycast/entity
         (get_entity_look self) 
         (get_entity_pos self)) 
-    <0, 100, 0>)
+     <0, 100, 0>)
 
 Named variables (aka memoized values) are accomplished using a list in
 the ravenmind.
 """
 
-import struct
+import argparse
+import logging
 from collections import ChainMap
-from pprint import pprint
+from pprint import pformat
 
-from bitarray import bitarray
-from bitarray.util import ba2int
+
 from lark.lark import Lark
 from lark.lexer import Token
 from lark.tree import ParseTree
+from pygments import highlight
+from pygments.lexers.mcfunction import MCFunctionLexer
+from pygments.formatters import TerminalTrueColorFormatter
 
 from builtin_patterns import builtin_patterns
+from util import number_to_pattern, patterns_to_give_command
 
-l = Lark(open("hex.lark"))
+GRAMMAR = open("hex.grammar").read()
 
-# Test spell to teleport a raycast entity very high
-t = l.parse(
-    """
-    (teleport
-        (raycast/entity
-            (get_entity_look self) 
-            (get_entity_pos self)) 
-        <0, 100, 0>)
-    """
-)
-
-print(t.pretty())
-print(t)
-
+# Defined variables. Mutates over the course of an evaluation.
 symbols = ChainMap(builtin_patterns)
 
-out = []
 
-
-def number_to_pattern(num: float):
-    """
-    Converts number to a pattern. First converts the number to IEEE 754
-    floating point, then constructs a pattern representing that floating
-    point number.
-    """
-    pattern = []
-    if num < 0:
-        # Negated number pattern prefix
-        pattern.append("dedd")
-    elif num > 0:
-        pattern.append("aqaa")
-
-    fp = bitarray()
-    fp.frombytes(struct.pack("!d", num))
-
-    exponent = fp[1:12]
-    mantissa = fp[12:]
-
-    pattern.append("wa")
-    for bit in mantissa[:-1]:
-        if bit == 1:
-            pattern.append("w")
-        pattern.append("a")
-
-    if mantissa[-1] == 1:
-        pattern.append("w")
-
-    pattern.append("d" * 52)
-
-    exponent = ba2int(exponent) - 1023
-    pattern.append("d" if exponent < 0 else "a" * abs(exponent))
-
-    return "".join(pattern)
-
-
-def eval(node: ParseTree | Token):
+def eval_expression(node: ParseTree | Token):
     """
     Evaluates expressions.
     """
-    if isinstance(node, Token):
-        if node == "self":
-            out.append(builtin_patterns["get_caster"])
-        else:
-            match node.type:
-                case "SIGNED_NUMBER":
-                    out.append(number_to_pattern(float(node)))
-        return
+    out = []
 
-    match node.data:
-        case "literal":
-            eval(node.children[0])
-        case "invocation":
-            eval_invocation(node)
-        case "list":
-            eval_list(node)
-        case "vector":
-            eval_vector(node)
-        case _:
-            assert False
+    if isinstance(node, Token):
+        match node.type:
+            case "SIGNED_NUMBER":
+                out.append(number_to_pattern(float(node)))
+            case "SYMBOL":
+                if node == "self":
+                    out.append(builtin_patterns["get_caster"])
+                else:
+                    pass
+    else:
+        match node.data:
+            case "literal":
+                out.extend(eval_expression(node.children[0]))
+            case "invocation":
+                out.extend(eval_invocation(node))
+            case "list":
+                out.extend(eval_list(node))
+            case "vector":
+                out.extend(eval_vector(node))
+            case _:
+                assert False
+
+    return out
 
 
 def eval_invocation(node: ParseTree):
@@ -121,22 +79,30 @@ def eval_invocation(node: ParseTree):
     Evaluate an invocation. Expects a symbol representing a function
     at index 0, with argument expressions after.
     """
+    out = []
     fn, *args = node.children
+
     for arg in args:
-        eval(arg)
+        out.extend(eval_expression(arg))
 
     out.append(builtin_patterns[fn])
+
+    return out
 
 
 def eval_list(node: ParseTree):
     """
     Evaluate a list. Expects a list of expressions.
     """
+    out = []
+
     for el in node.children:
-        eval(el)
+        out.extend(eval_expression(el))
 
     out.append(len(node.children))
     out.append(builtin_patterns["last_n_list"])
+
+    return out
 
 
 def eval_vector(node: ParseTree):
@@ -144,12 +110,45 @@ def eval_vector(node: ParseTree):
     Evaluates a vector. Expects 3 expressions.
     """
     assert len(node.children) == 3
+
+    out = []
+
     for el in node.children:
-        eval(el)
+        out.extend(eval_expression(el))
 
-    out.append(3)
-    out.append("MAKE_VECTOR")
+    out.append(builtin_patterns["construct_vec"])
+
+    return out
 
 
-eval(t)
-pprint(out)
+def main():
+    parser = argparse.ArgumentParser(
+        prog="hexpiler", description="A Lisp-Like to Hex Casting transpiler. Heavy WIP."
+    )
+    parser.add_argument("file")
+    parser.add_argument("-d", "--debug", action="store_true")
+    args = parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+
+    l = Lark(GRAMMAR)
+
+    t = l.parse(open(args.file).read())
+
+    logging.debug(f"Parse tree: \n{t.pretty()}")
+
+    out = eval_expression(t)
+    logging.debug(f"Final pattern list: \n{pformat(out)}")
+
+    print(
+        highlight(
+            patterns_to_give_command(out),
+            MCFunctionLexer(),
+            TerminalTrueColorFormatter(),
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
