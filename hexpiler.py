@@ -88,6 +88,7 @@ def eval_invocation(node: ParseTree):
 
     out.append(builtin_patterns[fn])
 
+
 def eval_list(node: ParseTree):
     """
     Evaluate a list. Expects a list of expressions.
@@ -97,6 +98,8 @@ def eval_list(node: ParseTree):
 
     out.append(len(node.children))
     out.append(builtin_patterns["last_n_list"])
+
+
 def eval_vector(node: ParseTree):
     """
     Evaluates a vector. Expects 3 expressions.
@@ -104,9 +107,10 @@ def eval_vector(node: ParseTree):
     assert len(node.children) == 3
     for el in node.children:
         eval(el)
-    
+
     out.append(3)
     out.append("MAKE_VECTOR")
+
 
 eval(t)
 pprint(out)

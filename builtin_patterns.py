@@ -20,6 +20,6 @@ builtin_patterns |= {
     "/": builtin_patterns["div_cross"],
     "%": builtin_patterns["modulo"],
     "^": builtin_patterns["pow_proj"],
-    "ONE": ('aqaaw', 'SOUTH_EAST'),
-    "NEGATIVE_ONE": ('deddw', 'NORTH_EAST'),
+    "ONE": ("aqaaw", "SOUTH_EAST"),
+    "NEGATIVE_ONE": ("deddw", "NORTH_EAST"),
 }
