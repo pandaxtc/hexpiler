@@ -21,9 +21,12 @@ Named variables (aka memoized values) are accomplished using a list in
 the ravenmind.
 """
 
+import struct
 from collections import ChainMap
 from pprint import pprint
 
+from bitarray import bitarray
+from bitarray.util import ba2int
 from lark.lark import Lark
 from lark.lexer import Token
 from lark.tree import ParseTree
@@ -51,6 +54,42 @@ symbols = ChainMap(builtin_patterns)
 out = []
 
 
+def number_to_pattern(num: float):
+    """
+    Converts number to a pattern. First converts the number to IEEE 754
+    floating point, then constructs a pattern representing that floating
+    point number.
+    """
+    pattern = []
+    if num < 0:
+        # Negated number pattern prefix
+        pattern.append("dedd")
+    elif num > 0:
+        pattern.append("aqaa")
+
+    fp = bitarray()
+    fp.frombytes(struct.pack("!d", num))
+
+    exponent = fp[1:12]
+    mantissa = fp[12:]
+
+    pattern.append("wa")
+    for bit in mantissa[:-1]:
+        if bit == 1:
+            pattern.append("w")
+        pattern.append("a")
+
+    if mantissa[-1] == 1:
+        pattern.append("w")
+
+    pattern.append("d" * 52)
+
+    exponent = ba2int(exponent) - 1023
+    pattern.append("d" if exponent < 0 else "a" * abs(exponent))
+
+    return "".join(pattern)
+
+
 def eval(node: ParseTree | Token):
     """
     Evaluates expressions.
@@ -60,8 +99,8 @@ def eval(node: ParseTree | Token):
             out.append(builtin_patterns["get_caster"])
         else:
             match node.type:
-                case _:
-                    out.append(str(node))
+                case "SIGNED_NUMBER":
+                    out.append(number_to_pattern(float(node)))
         return
 
     match node.data:
