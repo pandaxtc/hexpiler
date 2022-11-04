@@ -78,16 +78,73 @@ def eval_invocation(node: ParseTree):
     """
     Evaluate an invocation. Expects a symbol representing a function
     at index 0, with argument expressions after.
+
+    Special cases are defined for constructs like if/else, for, etc.
     """
-    out = []
     fn, *args = node.children
 
-    for arg in args:
-        out.extend(eval_expression(arg))
+    match fn:
+        case "if":
+            """
+            (if cond then-expr else-expr)
 
-    out.append(builtin_patterns[fn])
+            Conditionals are constructed according to:
 
-    return out
+                <condition>
+                identity
+                {
+                    patterns if true (1)
+                }
+                conjunction
+                {
+                    patterns if false (0), aka else
+                }
+                disjunction
+                hermes
+
+            In the absence of an else-expr, an empty list will be evaluated
+            by hermes.
+            """
+            cond = eval_expression(args[0])
+
+            then_expr = [
+                builtin_patterns["open_paren"],
+                *eval_expression(args[1]),
+                builtin_patterns["close_paren"],
+            ]
+
+            else_expr = (
+                [
+                    builtin_patterns["open_paren"],
+                    *eval_expression(args[2]),
+                    builtin_patterns["close_paren"],
+                ]
+                if len(args) > 2
+                else [builtin_patterns["empty_list"]]
+            )
+
+            return [
+                *cond,
+                builtin_patterns["identity"],
+                *then_expr,
+                builtin_patterns["and"],
+                *else_expr,
+                builtin_patterns["or"],
+                builtin_patterns["eval"],
+            ]
+
+        case _:
+            """
+            Standard function invocation.
+            """
+            out = []
+
+            for arg in args:
+                out.extend(eval_expression(arg))
+
+            out.append(builtin_patterns[fn])
+
+            return out
 
 
 def eval_list(node: ParseTree):

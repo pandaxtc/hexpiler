@@ -5,6 +5,14 @@ hexpiler is a transpiler for hexlisp targeting Hex Casting patterns.
 
 hexlisp is a Domain-Specific Language for the Minecraft [Hex Casting](https://github.com/gamma-delta/HexMod) mod. Its grammar can be found in [hexlisp.grammar](hexlisp.grammar).
 
+```lisp
+(bonemeal
+    (+ (raycast 
+            (get_entity_pos self)
+            (get_entity_look self))
+        <0,1,0>))
+```
+
 Please file an issue if something is broken!
 
 ## Requirements
@@ -20,7 +28,7 @@ Please file an issue if something is broken!
   * [x] Floats
   * [x] Pattern casting
   * [ ] Escaped patterns
-* [ ] Conditionals
+* [X] Conditionals
 * [ ] Loops
 * [ ] Builtin functions *(currently all patterns can be invoked as functions, but this is probably not safe or intended)*
 * [ ] Variable binding
