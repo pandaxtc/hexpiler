@@ -32,21 +32,16 @@ FocusSchema = schema(
 )
 
 
-# TODO: Add optimising pass to remove consecutive mul-2 and div-2 ops.
 def number_to_pattern(num: float):
     """
     Converts number to a pattern. First converts the number to IEEE 754
     floating point, then constructs a pattern representing that floating
     point number.
     """
-    pattern = []
-    if num < 0:
-        # Negated number pattern prefix
-        pattern.append("dedd")
-    elif num > 0:
-        pattern.append("aqaa")
-    else:
+    if num == 0:
         return "aqaa"
+
+    pattern = []
 
     fp = bitarray()
     fp.frombytes(struct.pack("!d", num))
@@ -66,9 +61,16 @@ def number_to_pattern(num: float):
     pattern.append("d" * 52)
 
     exponent = ba2int(exponent) - 1023
-    pattern.append("d" if exponent < 0 else "a" * abs(exponent))
+    pattern.append(("d" if exponent < 0 else "a") * abs(exponent))
 
-    return "".join(pattern)
+    # Optimizing pass, to remove mul-2 and div-2 operations that cancel
+    # out.
+    out = []
+    for subseq in "".join(pattern).split("w"):
+        acc = sum(-1 if op == "d" else 1 for op in subseq)
+        out.append(("d" if acc < 0 else "a") * abs(acc))
+
+    return ("aqaa" if num > 0 else "dedd") + "w".join(out)
 
 
 def patterns_to_give_command(patterns: list[str]):
